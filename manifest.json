@@ -3,8 +3,8 @@
   "short_name": "DrinkCostPro",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f0f12",
-  "theme_color": "#0f0f12",
+  "background_color": "#0b0c10",
+  "theme_color": "#0b0c10",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/920/920582.png",

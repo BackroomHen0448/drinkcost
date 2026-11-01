@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DrinkCostPro">
+<meta name="theme-color" content="#0f0f12">
+<link rel="manifest" href="manifest.json">
+<title>DrinkCostPro — Bar Cost & Pour Cost</title>
+<style>
+:root {
+  --bg: #0f0f12;
+  --card: #1a1a20;
+  --card-border: #2a2a35;
+  --text: #f5f5f7;
+  --subtext: #9a9aa6;
+  --accent: #ff9500;
+  --green: #30d158;
+  --red: #ff453a;
+  --blue: #0a84ff;
+  --purple: #bf5af2;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: calc(82px + env(safe-area-inset-bottom));
+  user-select: none;
+}
+header {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(15, 15, 18, 0.88);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--card-border);
+  padding: 12px 16px;
+}
+.header-top {
+  display: flex; justify-content: space-between; align-items: center;
+  max-width: 1100px; margin: 0 auto;
+}
+.app-title { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; display: flex; align-items: center; gap: 8px; }
+.save-badge {
+  font-size: 11px; font-weight: 600; color: var(--green);
+  background: rgba(48, 209, 88, 0.14);
+  padding: 4px 10px; border-radius: 999px;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 12px 16px; }
+
+/* KPI Strip */
+.kpi-strip {
+  display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 10px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px;
+}
+@media (max-width: 680px) {
+  .kpi-strip { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .kpi-card { min-width: 165px; scroll-snap-align: start; }
+}
+.kpi-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 11px 14px;
+}
+.kpi-title { font-size: 11px; color: var(--subtext); font-weight: 600; text-transform: uppercase; }
+.kpi-val { font-size: 19px; font-weight: 800; margin: 3px 0; }
+.kpi-sub { font-size: 11px; font-weight: 600; }
+
+/* Search & Pills */
+.search-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.search-input {
+  flex: 1; background: var(--card); border: 1px solid var(--card-border);
+  color: var(--text); border-radius: 12px; padding: 11px 14px;
+  font-size: 16px; outline: none;
+}
+.search-input:focus { border-color: var(--accent); }
+.btn-add {
+  background: var(--accent); color: #000; border: none;
+  border-radius: 12px; padding: 0 15px; font-weight: 700; font-size: 14px;
+  cursor: pointer; white-space: nowrap;
+}
+.pills-bar {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px;
+}
+.pill {
+  background: var(--card); border: 1px solid var(--card-border);
+  color: var(--text); padding: 7px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.pill.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+
+/* Cards List */
+.cat-header {
+  font-size: 13px; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin: 18px 4px 8px;
+}
+.card-list { display: flex; flex-direction: column; gap: 8px; }
+.item-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 13px 15px;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; cursor: pointer; transition: transform 0.1s, border-color 0.15s;
+}
+.item-card:active { transform: scale(0.99); border-color: var(--accent); }
+.item-main { flex: 1; min-width: 0; }
+.item-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.item-meta { font-size: 12px; color: var(--subtext); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.badge-drink {
+  background: rgba(10, 132, 255, 0.16); color: var(--blue);
+  font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+}
+.item-right { text-align: right; flex-shrink: 0; }
+.price-big { font-size: 18px; font-weight: 800; color: var(--accent); }
+.cost-big { font-size: 18px; font-weight: 800; color: var(--green); }
+.unit-sub { font-size: 11px; color: var(--subtext); margin-top: 2px; }
+.pc-badge {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 999px; margin-top: 3px;
+}
+.pc-bar-bg {
+  width: 100%; height: 5px; background: rgba(255,255,255,0.08);
+  border-radius: 999px; margin: 8px 0 6px; overflow: hidden;
+}
+.pc-bar-fill { height: 100%; border-radius: 999px; }
+
+/* Active Filter Banner */
+.filter-banner {
+  background: rgba(255, 149, 0, 0.14); border: 1px solid var(--accent);
+  border-radius: 14px; padding: 12px 15px; margin-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+.btn-reset-filter {
+  background: var(--accent); color: #000; border: none;
+  border-radius: 999px; padding: 7px 13px; font-weight: 700; font-size: 12px; cursor: pointer;
+}
+
+/* Floating Reactive Banner */
+.reactive-toast {
+  position: fixed; bottom: calc(74px + env(safe-area-inset-bottom));
+  left: 16px; right: 16px; max-width: 600px; margin: 0 auto;
+  background: linear-gradient(90deg, #ffd60a, #ff9500);
+  color: #000; border-radius: 16px; padding: 13px 16px;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.5); z-index: 40;
+}
+.reactive-toast button {
+  background: #000; color: #ffd60a; border: none;
+  padding: 8px 13px; border-radius: 999px; font-weight: 800; font-size: 12px; cursor: pointer;
+}
+
+/* Bottom TabBar */
+.tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: rgba(20, 20, 26, 0.94);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid var(--card-border);
+  display: flex; justify-content: space-around;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  z-index: 30;
+}
+.tab-btn {
+  background: none; border: none; color: var(--subtext);
+  font-size: 11px; font-weight: 600; display: flex; flex-direction: column;
+  align-items: center; gap: 3px; cursor: pointer; flex: 1;
+}
+.tab-btn span.icon { font-size: 20px; }
+.tab-btn.active { color: var(--accent); font-weight: 700; }
+
+/* Modal Sheet */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.68);
+  display: none; justify-content: center; align-items: flex-end; z-index: 50;
+}
+.modal-backdrop.open { display: flex; }
+@media (min-width: 700px) {
+  .modal-backdrop { align-items: center; }
+  .modal-sheet { border-radius: 20px !important; max-width: 520px; }
+}
+.modal-sheet {
+  background: #1c1c24; width: 100%; max-height: 88vh;
+  border-radius: 22px 22px 0 0; border: 1px solid var(--card-border);
+  padding: 18px; overflow-y: auto;
+}
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;
+}
+.modal-title { font-size: 18px; font-weight: 800; }
+.btn-close {
+  background: var(--accent); color: #000; border: none;
+  border-radius: 999px; padding: 7px 15px; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.form-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.form-row label { font-size: 14px; font-weight: 600; }
+.form-input {
+  background: #121217; border: 1px solid var(--card-border);
+  color: var(--accent); font-size: 17px; font-weight: 800;
+  text-align: right; border-radius: 10px; padding: 8px 12px; width: 130px;
+}
+.settings-card {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 14px; padding: 14px; margin-bottom: 12px;
+}
+.preset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.preset-btn {
+  background: rgba(255,255,255,0.07); color: var(--text); border: none;
+  border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.preset-btn.active { background: var(--accent); color: #000; }
+.action-btn {
+  width: 100%; background: var(--card); border: 1px solid var(--card-border);
+  color: var(--text); padding: 13px; border-radius: 12px; font-weight: 700;
+  font-size: 14px; cursor: pointer; margin-bottom: 8px; text-align: left;
+  display: flex; justify-content: space-between; align-items: center;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="app-title">🍸 DrinkCostPro</div>
+    <div class="save-badge" id="saveBadge">✓ Salvato in locale</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="kpi-strip" id="kpiStrip"></div>
+
+  <!-- TAB 0: BOTTIGLIE -->
+  <div id="tabBottles">
+    <div class="search-row">
+      <input type="search" id="bottleSearch" class="search-input" placeholder="Cerca Campari, Havana 7, Gin, Aperol..." oninput="renderBottles()">
+      <button class="btn-add" onclick="openAddBottleModal()">+ Bottiglia</button>
+    </div>
+    <div class="pills-bar" id="bottleCatPills"></div>
+    <div id="bottlesContainer"></div>
+  </div>
+
+  <!-- TAB 1: COCKTAIL -->
+  <div id="tabCocktails" style="display:none;">
+    <div id="activeFilterBanner"></div>
+    <div class="search-row">
+      <input type="search" id="cocktailSearch" class="search-input" placeholder="Cerca Negroni, Coca Havana 7, El Baffo..." oninput="renderCocktails()">
+      <button class="btn-add" onclick="openAddCocktailModal()">+ Cocktail</button>
+    </div>
+    <div class="pills-bar" id="cocktailCatPills"></div>
+    <div id="cocktailsContainer"></div>
+  </div>
+
+  <!-- TAB 2: IVA & BACKUP -->
+  <div id="tabSettings" style="display:none;">
+    <div id="settingsContainer"></div>
+  </div>
+</div>
+
+<!-- Banner Reattivo Flottante -->
+<div id="reactiveToast" class="reactive-toast" style="display:none;"></div>
+
+<!-- Barra Navigazione iPhone / Mac -->
+<nav class="tabbar">
+  <button class="tab-btn active" id="navBtn0" onclick="switchTab(0)">
+    <span class="icon">🍾</span>
+    <span id="navLbl0">Bottiglie</span>
+  </button>
+  <button class="tab-btn" id="navBtn1" onclick="switchTab(1)">
+    <span class="icon">🍸</span>
+    <span id="navLbl1">Cocktail</span>
+  </button>
+  <button class="tab-btn" id="navBtn2" onclick="switchTab(2)">
+    <span class="icon">⚙️</span>
+    <span>IVA & Backup</span>
+  </button>
+</nav>
+
+<!-- Modale Universale -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target===this) closeModal()">
+  <div class="modal-sheet" id="modalContent"></div>
+</div>
+
+<script>
+const STORAGE_KEY = "drink_cost_pro_pwa_v2";
+
+function getFactoryDB() {
+  return {
+    settings: { vatPercent: 22.0, garnishCost: 0.15, wineGlassMl: 150.0, targetPourCostPercent: 20.0 },
+    bottles: [
+      { id: "aperol", name: "Aperol", category: "Aperitivi & Bitter", unit: "ml", size: 1000, price: 12.50, wastePercent: 5 },
+      { id: "select", name: "Select", category: "Aperitivi & Bitter", unit: "ml", size: 1000, price: 13.00, wastePercent: 5 },
+      { id: "cynar", name: "Cynar", category: "Aperitivi & Bitter", unit: "ml", size: 1000, price: 11.50, wastePercent: 5 },
+      { id: "campari", name: "Campari", category: "Aperitivi & Bitter", unit: "ml", size: 1000, price: 16.50, wastePercent: 5 },
+      { id: "venturo", name: "Venturo Aperitivo", category: "Aperitivi & Bitter", unit: "ml", size: 700, price: 15.00, wastePercent: 5 },
+      { id: "vetz", name: "Vetz Aperitivo", category: "Aperitivi & Bitter", unit: "ml", size: 700, price: 15.50, wastePercent: 5 },
+      { id: "prosecco", name: "Prosecco (Spina)", category: "Vini & Vermouth", unit: "ml", size: 1000, price: 5.50, wastePercent: 5 },
+      { id: "vino_bianco", name: "Vino Bianco Fermo", category: "Vini & Vermouth", unit: "ml", size: 1000, price: 4.50, wastePercent: 5 },
+      { id: "vermouth_rosso", name: "Martini / Vermouth Rosso", category: "Vini & Vermouth", unit: "ml", size: 1000, price: 9.50, wastePercent: 5 },
+      { id: "vermouth_dry", name: "Martini / Vermouth Dry", category: "Vini & Vermouth", unit: "ml", size: 1000, price: 9.50, wastePercent: 5 },
+      { id: "gin_base", name: "Gin Base (Speed Rail)", category: "Distillati Base", unit: "ml", size: 1000, price: 13.50, wastePercent: 5 },
+      { id: "gin_prem", name: "Gin Premium", category: "Distillati Premium", unit: "ml", size: 700, price: 26.00, wastePercent: 5 },
+      { id: "gin_zero", name: "Gin 0.0 Analcolico", category: "Distillati 0.0", unit: "ml", size: 700, price: 16.50, wastePercent: 5 },
+      { id: "vodka_base", name: "Vodka Base (Speed Rail)", category: "Distillati Base", unit: "ml", size: 1000, price: 12.50, wastePercent: 5 },
+      { id: "vodka_prem", name: "Vodka Premium", category: "Distillati Premium", unit: "ml", size: 700, price: 24.00, wastePercent: 5 },
+      { id: "rum_bianco", name: "Rum Bianco", category: "Distillati Base", unit: "ml", size: 1000, price: 13.50, wastePercent: 5 },
+      { id: "rum_havana_7", name: "Havana 7", category: "Distillati Base", unit: "ml", size: 1000, price: 13.50, wastePercent: 5 },
+      { id: "bourbon", name: "Bourbon / Whiskey", category: "Distillati Base", unit: "ml", size: 1000, price: 16.00, wastePercent: 5 },
+      { id: "tequila", name: "Tequila Blanco", category: "Distillati Base", unit: "ml", size: 700, price: 15.50, wastePercent: 5 },
+      { id: "triple_sec", name: "Triple Sec / Cointreau", category: "Liquori", unit: "ml", size: 700, price: 11.50, wastePercent: 5 },
+      { id: "amaro_capo_pic", name: "Amaro del Capo Peperoncino", category: "Liquori", unit: "ml", size: 700, price: 12.50, wastePercent: 5 },
+      { id: "t_plus", name: "Liquore al Tè (T+)", category: "Liquori", unit: "ml", size: 700, price: 14.50, wastePercent: 5 },
+      { id: "sciroppo_sambuco", name: "Sciroppo Fiori di Sambuco", category: "Sciroppi & Succhi", unit: "ml", size: 700, price: 8.50, wastePercent: 5 },
+      { id: "sciroppo_zucchero", name: "Sciroppo di Zucchero", category: "Sciroppi & Succhi", unit: "ml", size: 1000, price: 3.50, wastePercent: 5 },
+      { id: "succo_limone", name: "Succo di Limone", category: "Sciroppi & Succhi", unit: "ml", size: 1000, price: 3.80, wastePercent: 5 },
+      { id: "succo_lime", name: "Succo di Lime", category: "Sciroppi & Succhi", unit: "ml", size: 1000, price: 4.20, wastePercent: 5 },
+      { id: "angostura", name: "Angostura Bitter", category: "Bitter & Spezie", unit: "ml", size: 200, price: 14.00, wastePercent: 0 },
+      { id: "tabasco", name: "Tabasco", category: "Bitter & Spezie", unit: "ml", size: 60, price: 3.20, wastePercent: 0 },
+      { id: "soda", name: "Soda Water / Seltz", category: "Sodati a Mescita", unit: "ml", size: 1000, price: 0.80, wastePercent: 5 },
+      { id: "spuma", name: "Spuma (Bottiglia Grande)", category: "Sodati a Mescita", unit: "ml", size: 1000, price: 1.20, wastePercent: 5 },
+      { id: "tonica_sfusa", name: "Acqua Tonica (Mescita Base)", category: "Sodati a Mescita", unit: "ml", size: 1000, price: 1.80, wastePercent: 5 },
+      { id: "lemon_sfusa", name: "Lemon Soda (Mescita Base)", category: "Sodati a Mescita", unit: "ml", size: 1000, price: 1.80, wastePercent: 5 },
+      { id: "ginger_beer", name: "Ginger Beer", category: "Sodati a Mescita", unit: "ml", size: 1000, price: 3.50, wastePercent: 5 },
+      { id: "cola", name: "Coca-Cola", category: "Sodati a Mescita", unit: "ml", size: 1000, price: 2.20, wastePercent: 5 },
+      { id: "tonica_bot", name: "Tonica Bottiglietta (Premium)", category: "Bottigliette Monoporzione", unit: "pz", size: 1, price: 0.85, wastePercent: 0 },
+      { id: "lemon_bot", name: "Lemon Bottiglietta (Premium)", category: "Bottigliette Monoporzione", unit: "pz", size: 1, price: 0.85, wastePercent: 0 },
+      { id: "gingerino", name: "Gingerino (Bottiglietta)", category: "Bottigliette Monoporzione", unit: "pz", size: 1, price: 0.65, wastePercent: 0 },
+      { id: "sanbitter", name: "Sanbitter (Bottiglietta)", category: "Bottigliette Monoporzione", unit: "pz", size: 1, price: 0.65, wastePercent: 0 },
+      { id: "crodino", name: "Crodino (Bottiglietta)", category: "Bottigliette Monoporzione", unit: "pz", size: 1, price: 0.65, wastePercent: 0 }
+    ],
+    cocktails: [
+      { id: "spritz_aperol", name: "Spritz Aperol", category: "Spritz & Aperitivi", menuPrice: 5.00, includeGarnish: true, ingredients: [{bottleId:"prosecco",qty:90},{bottleId:"aperol",qty:60},{bottleId:"soda",qty:30}] },
+      { id: "spritz_select", name: "Spritz Select", category: "Spritz & Aperitivi", menuPrice: 5.00, includeGarnish: true, ingredients: [{bottleId:"prosecco",qty:90},{bottleId:"select",qty:60},{bottleId:"soda",qty:30}] },
+      { id: "spritz_cynar", name: "Spritz Cynar", category: "Spritz & Aperitivi", menuPrice: 5.00, includeGarnish: true, ingredients: [{bottleId:"prosecco",qty:90},{bottleId:"cynar",qty:60},{bottleId:"soda",qty:30}] },
+      { id: "spritz_campari", name: "Spritz Campari", category: "Spritz & Aperitivi", menuPrice: 5.50, includeGarnish: true, ingredients: [{bottleId:"prosecco",qty:90},{bottleId:"campari",qty:60},{bottleId:"soda",qty:30}] },
+      { id: "spritz_venturo", name: "Spritz Venturo", category: "Spritz & Aperitivi", menuPrice: 6.00, includeGarnish: true, ingredients: [{bottleId:"prosecco",qty:90},{bottleId:"venturo",qty:60},{bottleId:"soda",qty:30}] },
+      { id: "spritz_vetz", name: "Spritz Vetz", category: "Spritz & Aperitivi", menuPrice: 6.00, includeGarnish: true, ingredients: [{bottleId:"prosecco",qty:90},{bottleId:"vetz",qty:60},{bottleId:"soda",qty:30}] },
+      { id: "ugo", name: "Ugo (Hugo Spritz)", category: "Spritz & Aperitivi", menuPrice: 5.50, includeGarnish: true, ingredients: [{bottleId:"prosecco",qty:90},{bottleId:"sciroppo_sambuco",qty:40},{bottleId:"soda",qty:30}] },
+      { id: "gingerino_liscio", name: "Gingerino Liscio", category: "Analcolici & Bottigliette", menuPrice: 3.50, includeGarnish: true, ingredients: [{bottleId:"gingerino",qty:1}] },
+      { id: "sanbitter_liscio", name: "Sanbitter Liscio", category: "Analcolici & Bottigliette", menuPrice: 3.50, includeGarnish: true, ingredients: [{bottleId:"sanbitter",qty:1}] },
+      { id: "crodino_liscio", name: "Crodino Liscio", category: "Analcolici & Bottigliette", menuPrice: 3.50, includeGarnish: true, ingredients: [{bottleId:"crodino",qty:1}] },
+      { id: "analcolico_gingerino", name: "Analcolico Base (Spuma + Gingerino)", category: "Analcolici & Bottigliette", menuPrice: 4.50, includeGarnish: true, ingredients: [{bottleId:"spuma",qty:150,useWineGlassDose:true},{bottleId:"gingerino",qty:1}] },
+      { id: "analcolico_crodino", name: "Analcolico Base (Spuma + Crodino)", category: "Analcolici & Bottigliette", menuPrice: 4.50, includeGarnish: true, ingredients: [{bottleId:"spuma",qty:150,useWineGlassDose:true},{bottleId:"crodino",qty:1}] },
+      { id: "analcolico_sanbitter", name: "Analcolico Base (Spuma + Sanbitter)", category: "Analcolici & Bottigliette", menuPrice: 4.50, includeGarnish: true, ingredients: [{bottleId:"spuma",qty:150,useWineGlassDose:true},{bottleId:"sanbitter",qty:1}] },
+      { id: "gingerino_vino", name: "Gingerino con Vino", category: "Con Vino / Martini", menuPrice: 4.50, includeGarnish: true, ingredients: [{bottleId:"gingerino",qty:1},{bottleId:"vino_bianco",qty:150,useWineGlassDose:true}] },
+      { id: "sanbitter_vino", name: "Sanbitter con Vino", category: "Con Vino / Martini", menuPrice: 4.50, includeGarnish: true, ingredients: [{bottleId:"sanbitter",qty:1},{bottleId:"vino_bianco",qty:150,useWineGlassDose:true}] },
+      { id: "crodino_vino", name: "Crodino con Vino", category: "Con Vino / Martini", menuPrice: 4.50, includeGarnish: true, ingredients: [{bottleId:"crodino",qty:1},{bottleId:"vino_bianco",qty:150,useWineGlassDose:true}] },
+      { id: "crodino_martini", name: "Crodino con Martini", category: "Con Vino / Martini", menuPrice: 5.00, includeGarnish: true, ingredients: [{bottleId:"crodino",qty:1},{bottleId:"vermouth_rosso",qty:150,useWineGlassDose:true}] },
+      { id: "gingerino_martini", name: "Gingerino con Martini", category: "Con Vino / Martini", menuPrice: 5.00, includeGarnish: true, ingredients: [{bottleId:"gingerino",qty:1},{bottleId:"vermouth_rosso",qty:150,useWineGlassDose:true}] },
+      { id: "americano", name: "Americano", category: "Classici Pre-Dinner", menuPrice: 7.00, includeGarnish: true, ingredients: [{bottleId:"campari",qty:30},{bottleId:"vermouth_rosso",qty:30},{bottleId:"soda",qty:30}] },
+      { id: "negroni_sbagliato", name: "Negroni Sbagliato", category: "Classici Pre-Dinner", menuPrice: 7.50, includeGarnish: true, ingredients: [{bottleId:"campari",qty:30},{bottleId:"vermouth_rosso",qty:30},{bottleId:"prosecco",qty:30}] },
+      { id: "negroni", name: "Negroni", category: "Classici Pre-Dinner", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"campari",qty:30},{bottleId:"vermouth_rosso",qty:30},{bottleId:"gin_base",qty:30}] },
+      { id: "boulevardier", name: "Boulevardier", category: "Classici Pre-Dinner", menuPrice: 8.50, includeGarnish: true, ingredients: [{bottleId:"bourbon",qty:45},{bottleId:"campari",qty:30},{bottleId:"vermouth_rosso",qty:30}] },
+      { id: "gin_tonic_base", name: "Gin Tonic (Base)", category: "Gin & Vodka Highball", menuPrice: 7.00, includeGarnish: true, ingredients: [{bottleId:"gin_base",qty:50},{bottleId:"tonica_sfusa",qty:150}] },
+      { id: "gin_lemon_base", name: "Gin Lemon (Base)", category: "Gin & Vodka Highball", menuPrice: 7.00, includeGarnish: true, ingredients: [{bottleId:"gin_base",qty:50},{bottleId:"lemon_sfusa",qty:150}] },
+      { id: "gin_tonic_prem", name: "Gin Tonic Premium", category: "Gin & Vodka Highball", menuPrice: 10.00, includeGarnish: true, ingredients: [{bottleId:"gin_prem",qty:50},{bottleId:"tonica_bot",qty:1}] },
+      { id: "gin_lemon_prem", name: "Gin Lemon Premium", category: "Gin & Vodka Highball", menuPrice: 10.00, includeGarnish: true, ingredients: [{bottleId:"gin_prem",qty:50},{bottleId:"lemon_bot",qty:1}] },
+      { id: "vodka_tonic_base", name: "Vodka Tonic (Base)", category: "Gin & Vodka Highball", menuPrice: 7.00, includeGarnish: true, ingredients: [{bottleId:"vodka_base",qty:50},{bottleId:"tonica_sfusa",qty:150}] },
+      { id: "vodka_tonic_prem", name: "Vodka Tonic Premium", category: "Gin & Vodka Highball", menuPrice: 10.00, includeGarnish: true, ingredients: [{bottleId:"vodka_prem",qty:50},{bottleId:"tonica_bot",qty:1}] },
+      { id: "gin_tonic_zero", name: "Gin Tonic 0.0", category: "Gin & Vodka Highball", menuPrice: 7.00, includeGarnish: true, ingredients: [{bottleId:"gin_zero",qty:50},{bottleId:"tonica_sfusa",qty:150}] },
+      { id: "gin_lemon_zero", name: "Gin Lemon 0.0", category: "Gin & Vodka Highball", menuPrice: 7.00, includeGarnish: true, ingredients: [{bottleId:"gin_zero",qty:50},{bottleId:"lemon_sfusa",qty:150}] },
+      { id: "vetz_tonic", name: "Vetz Tonic", category: "Gin & Vodka Highball", menuPrice: 7.50, includeGarnish: true, ingredients: [{bottleId:"vetz",qty:50},{bottleId:"tonica_sfusa",qty:150}] },
+      { id: "coca_havana_7", name: "Coca Havana 7", category: "Gin & Vodka Highball", menuPrice: 7.50, includeGarnish: true, ingredients: [{bottleId:"rum_havana_7",qty:50},{bottleId:"tonica_bot",qty:1}] },
+      { id: "gin_fizz", name: "Gin Fizz", category: "Fizz & Sour", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"gin_base",qty:45},{bottleId:"succo_limone",qty:30},{bottleId:"sciroppo_zucchero",qty:10},{bottleId:"soda",qty:80}] },
+      { id: "vodka_fizz", name: "Vodka Fizz", category: "Fizz & Sour", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"vodka_base",qty:45},{bottleId:"succo_limone",qty:30},{bottleId:"sciroppo_zucchero",qty:10},{bottleId:"soda",qty:80}] },
+      { id: "venturo_fizz", name: "Venturo Fizz", category: "Fizz & Sour", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"venturo",qty:45},{bottleId:"succo_limone",qty:30},{bottleId:"sciroppo_zucchero",qty:10},{bottleId:"soda",qty:80}] },
+      { id: "tea_sour", name: "Tea Sour (T+)", category: "Fizz & Sour", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"t_plus",qty:50},{bottleId:"succo_limone",qty:30},{bottleId:"sciroppo_zucchero",qty:20}] },
+      { id: "whiskey_sour", name: "Whiskey Sour", category: "Fizz & Sour", menuPrice: 8.50, includeGarnish: true, ingredients: [{bottleId:"bourbon",qty:50},{bottleId:"succo_limone",qty:30},{bottleId:"sciroppo_zucchero",qty:20}] },
+      { id: "rum_sour", name: "Rum Sour", category: "Fizz & Sour", menuPrice: 8.50, includeGarnish: true, ingredients: [{bottleId:"rum_bianco",qty:50},{bottleId:"succo_lime",qty:30},{bottleId:"sciroppo_zucchero",qty:20}] },
+      { id: "el_baffo", name: "El Baffo (House Signature)", category: "Signature & IBA", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"amaro_capo_pic",qty:25},{bottleId:"triple_sec",qty:20},{bottleId:"tequila",qty:20},{bottleId:"succo_lime",qty:20},{bottleId:"sciroppo_zucchero",qty:10},{bottleId:"tabasco",qty:0.5}] },
+      { id: "martini_dry", name: "Martini Dry", category: "Signature & IBA", menuPrice: 8.50, includeGarnish: true, ingredients: [{bottleId:"gin_base",qty:60},{bottleId:"vermouth_dry",qty:10}] },
+      { id: "old_fashioned", name: "Old Fashioned", category: "Signature & IBA", menuPrice: 8.50, includeGarnish: true, ingredients: [{bottleId:"bourbon",qty:45},{bottleId:"sciroppo_zucchero",qty:5},{bottleId:"angostura",qty:2}] },
+      { id: "mojito", name: "Mojito", category: "Signature & IBA", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"rum_bianco",qty:45},{bottleId:"succo_lime",qty:20},{bottleId:"sciroppo_zucchero",qty:15},{bottleId:"soda",qty:60}] },
+      { id: "daiquiri", name: "Daiquiri", category: "Signature & IBA", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"rum_bianco",qty:60},{bottleId:"succo_lime",qty:20},{bottleId:"sciroppo_zucchero",qty:10}] },
+      { id: "moscow_mule", name: "Moscow Mule", category: "Signature & IBA", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"vodka_base",qty:45},{bottleId:"succo_lime",qty:15},{bottleId:"ginger_beer",qty:120}] },
+      { id: "south_side", name: "South Side", category: "Signature & IBA", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"gin_base",qty:60},{bottleId:"succo_lime",qty:30},{bottleId:"sciroppo_zucchero",qty:15}] },
+      { id: "cuba_libre", name: "Cuba Libre", category: "Signature & IBA", menuPrice: 8.00, includeGarnish: true, ingredients: [{bottleId:"rum_bianco",qty:50},{bottleId:"succo_lime",qty:10},{bottleId:"cola",qty:120}] },
+      { id: "long_island", name: "Long Island Iced Tea", category: "Signature & IBA", menuPrice: 9.00, includeGarnish: true, ingredients: [{bottleId:"vodka_base",qty:15},{bottleId:"gin_base",qty:15},{bottleId:"rum_bianco",qty:15},{bottleId:"tequila",qty:15},{bottleId:"triple_sec",qty:15},{bottleId:"succo_limone",qty:25},{bottleId:"sciroppo_zucchero",qty:20},{bottleId:"cola",qty:40}] }
+    ]
+  };
+}
+
+let db = getFactoryDB();
+let currentTab = 0;
+let selectedBottleCat = "Tutte";
+let selectedCocktailCat = "Tutte";
+let activeBottleFilterId = null;
+let lastModifiedBottleId = null;
+
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.bottles && parsed.cocktails) {
+        db = parsed;
+      }
+    }
+  } catch (e) { console.error(e); }
+}
+
+function saveDB() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    const now = new Date();
+    const t = now.toTimeString().split(" ")[0];
+    document.getElementById("saveBadge").textContent = "✓ Salvato " + t;
+  } catch (e) { console.error(e); }
+}
+
+function parseNum(v, fallback) {
+  if (typeof v === "number") return v;
+  const n = parseFloat(String(v).replace(",", ".").trim());
+  return isNaN(n) ? fallback : n;
+}
+
+function getBottle(id) {
+  return db.bottles.find(b => b.id === id);
+}
+
+function unitCost(b) {
+  const net = b.size * Math.max(0.01, 1 - (b.wastePercent / 100));
+  return net > 0 ? b.price / net : 0;
+}
+
+function cocktailsUsing(bottleId) {
+  return db.cocktails.filter(c => c.ingredients.some(i => i.bottleId === bottleId));
+}
+
+function effectiveQty(ing) {
+  return ing.useWineGlassDose ? db.settings.wineGlassMl : ing.qty;
+}
+
+function drinkCost(c) {
+  let sum = 0;
+  for (const ing of c.ingredients) {
+    const b = getBottle(ing.bottleId);
+    if (b) sum += effectiveQty(ing) * unitCost(b);
+  }
+  if (c.includeGarnish) sum += db.settings.garnishCost;
+  return sum;
+}
+
+function netMenuPrice(c) {
+  return c.menuPrice / (1 + db.settings.vatPercent / 100);
+}
+
+function pourCostPercent(c) {
+  const net = netMenuPrice(c);
+  return net > 0 ? (drinkCost(c) / net) * 100 : 0;
+}
+
+function netMargin(c) {
+  return netMenuPrice(c) - drinkCost(c);
+}
+
+function suggestedMenuPrice(c) {
+  const target = Math.max(0.01, db.settings.targetPourCostPercent / 100);
+  return (drinkCost(c) / target) * (1 + db.settings.vatPercent / 100);
+}
+
+function renderKPIs() {
+  const count = db.cocktails.length || 1;
+  let totDC = 0, totPC = 0, totMargin = 0, overCount = 0;
+  for (const c of db.cocktails) {
+    const dc = drinkCost(c);
+    const pc = pourCostPercent(c);
+    totDC += dc;
+    totPC += pc;
+    totMargin += netMargin(c);
+    if (pc > db.settings.targetPourCostPercent) overCount++;
+  }
+  const avgPC = totPC / count;
+  const avgDC = totDC / count;
+  const avgM = totMargin / count;
+
+  document.getElementById("kpiStrip").innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-title">Pour Cost Medio</div>
+      <div class="kpi-val" style="color:${avgPC <= db.settings.targetPourCostPercent ? 'var(--green)' : 'var(--accent)'}">${avgPC.toFixed(1)}%</div>
+      <div class="kpi-sub" style="color:var(--subtext)">Target: ${db.settings.targetPourCostPercent}%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Drink Cost Medio</div>
+      <div class="kpi-val" style="color:var(--blue)">€ ${avgDC.toFixed(2)}</div>
+      <div class="kpi-sub" style="color:var(--subtext)">Su ${db.cocktails.length} ricette</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Margine Netto Medio</div>
+      <div class="kpi-val" style="color:var(--purple)">€ ${avgM.toFixed(2)}</div>
+      <div class="kpi-sub" style="color:var(--subtext)">IVA ${db.settings.vatPercent}% scorporata</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-title">Fuori Target</div>
+      <div class="kpi-val" style="color:${overCount === 0 ? 'var(--green)' : 'var(--red)'}">${overCount} drink</div>
+      <div class="kpi-sub" style="color:var(--subtext)">Oltre il ${db.settings.targetPourCostPercent}%</div>
+    </div>
+  `;
+  document.getElementById("navLbl0").textContent = `Bottiglie (${db.bottles.length})`;
+  document.getElementById("navLbl1").textContent = `Cocktail (${db.cocktails.length})`;
+}
+
+function renderBottles() {
+  const cats = ["Tutte", ...Array.from(new Set(db.bottles.map(b => b.category))).sort()];
+  document.getElementById("bottleCatPills").innerHTML = cats.map(c =>
+    `<button class="pill ${selectedBottleCat === c ? 'active' : ''}" onclick="selectedBottleCat='${c}';renderBottles()">${c}</button>`
+  ).join("");
+
+  const q = (document.getElementById("bottleSearch").value || "").toLowerCase().trim();
+  const filtered = db.bottles.filter(b => {
+    const mCat = selectedBottleCat === "Tutte" || b.category === selectedBottleCat;
+    const mQ = !q || b.name.toLowerCase().includes(q) || b.category.toLowerCase().includes(q);
+    return mCat && mQ;
+  });
+
+  const visCats = Array.from(new Set(filtered.map(b => b.category))).sort();
+  let html = "";
+  for (const cat of visCats) {
+    html += `<div class="cat-header">${cat}</div><div class="card-list">`;
+    for (const b of filtered.filter(x => x.category === cat)) {
+      const used = cocktailsUsing(b.id).length;
+      const uc = unitCost(b);
+      html += `
+        <div class="item-card" onclick="openEditBottleModal('${b.id}')">
+          <div class="item-main">
+            <div class="item-name">${b.name}</div>
+            <div class="item-meta">
+              <span>${b.size} ${b.unit} • Spreco ${b.wastePercent}%</span>
+              ${used > 0 ? `<span class="badge-drink" onclick="event.stopPropagation();filterByBottle('${b.id}')">🍸 ${used} drink</span>` : ''}
+            </div>
+          </div>
+          <div class="item-right">
+            <div class="price-big">€ ${b.price.toFixed(2)}</div>
+            <div class="unit-sub">€ ${uc.toFixed(4)} / ${b.unit}</div>
+          </div>
+        </div>
+      `;
+    }
+    html += `</div>`;
+  }
+  document.getElementById("bottlesContainer").innerHTML = html;
+}
+
+function filterByBottle(bottleId) {
+  activeBottleFilterId = bottleId;
+  switchTab(1);
+}
+
+function renderCocktails() {
+  const bannerEl = document.getElementById("activeFilterBanner");
+  if (activeBottleFilterId) {
+    const b = getBottle(activeBottleFilterId);
+    if (b) {
+      bannerEl.innerHTML = `
+        <div class="filter-banner">
+          <div>
+            <div style="font-weight:800;color:var(--accent)">Filtro Bottiglia: ${b.name} (€ ${b.price.toFixed(2)})</div>
+            <div style="font-size:12px;color:var(--subtext)">Mostrati solo i cocktail che contengono ${b.name}</div>
+          </div>
+          <button class="btn-reset-filter" onclick="activeBottleFilterId=null;renderCocktails()">Mostra Tutti</button>
+        </div>
+      `;
+    }
+  } else {
+    bannerEl.innerHTML = "";
+  }
+
+  const cats = ["Tutte", ...Array.from(new Set(db.cocktails.map(c => c.category))).sort()];
+  document.getElementById("cocktailCatPills").innerHTML = cats.map(c =>
+    `<button class="pill ${selectedCocktailCat === c ? 'active' : ''}" onclick="selectedCocktailCat='${c}';renderCocktails()">${c}</button>`
+  ).join("");
+
+  const q = (document.getElementById("cocktailSearch").value || "").toLowerCase().trim();
+  const filtered = db.cocktails.filter(c => {
+    const mBot = !activeBottleFilterId || c.ingredients.some(i => i.bottleId === activeBottleFilterId);
+    const mCat = selectedCocktailCat === "Tutte" || c.category === selectedCocktailCat;
+    const mQ = !q || c.name.toLowerCase().includes(q) || c.category.toLowerCase().includes(q);
+    return mBot && mCat && mQ;
+  });
+
+  const visCats = Array.from(new Set(filtered.map(c => c.category))).sort();
+  let html = "";
+  for (const cat of visCats) {
+    html += `<div class="cat-header">${cat}</div><div class="card-list">`;
+    for (const c of filtered.filter(x => x.category === cat)) {
+      const dc = drinkCost(c);
+      const pc = pourCostPercent(c);
+      const m = netMargin(c);
+      const col = pc <= 18 ? 'var(--green)' : (pc <= db.settings.targetPourCostPercent + 2 ? 'var(--accent)' : 'var(--red)');
+      const parts = c.ingredients.map(i => {
+        const b = getBottle(i.bottleId);
+        if (!b) return "";
+        const qVal = effectiveQty(i);
+        const cVal = qVal * unitCost(b);
+        return `${qVal}${b.unit} ${b.name} (€${cVal.toFixed(2)})`;
+      }).filter(Boolean);
+      if (c.includeGarnish) parts.push(`Garnish (€${db.settings.garnishCost.toFixed(2)})`);
+
+      html += `
+        <div class="item-card" style="flex-direction:column;align-items:stretch;" onclick="openEditCocktailModal('${c.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div class="item-name">${c.name}</div>
+              <div class="item-meta">Menu: € ${c.menuPrice.toFixed(2)} • Margine Netto: € ${m.toFixed(2)}</div>
+            </div>
+            <div class="item-right">
+              <div class="cost-big">€ ${dc.toFixed(2)}</div>
+              <span class="pc-badge" style="background:rgba(255,255,255,0.08);color:${col}">PC: ${pc.toFixed(1)}%</span>
+            </div>
+          </div>
+          <div class="pc-bar-bg">
+            <div class="pc-bar-fill" style="width:${Math.min(100, Math.max(4, (pc/40)*100))}%;background:${col}"></div>
+          </div>
+          <div style="font-size:11px;color:var(--subtext);line-height:1.4;">${parts.join("  •  ")}</div>
+        </div>
+      `;
+    }
+    html += `</div>`;
+  }
+  document.getElementById("cocktailsContainer").innerHTML = html;
+}
+
+function renderSettings() {
+  const s = db.settings;
+  document.getElementById("settingsContainer").innerHTML = `
+    <div class="cat-header">Parametri Globali di Calcolo</div>
+    <div class="settings-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><strong>Aliquota IVA Vendita</strong></div>
+        <div style="font-size:20px;font-weight:800;color:var(--accent)">${s.vatPercent}%</div>
+      </div>
+      <div class="preset-row">
+        ${[10, 22].map(v => `<button class="preset-btn ${s.vatPercent===v?'active':''}" onclick="db.settings.vatPercent=${v};saveAndRefresh()">IVA ${v}%</button>`).join("")}
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><strong>Costo Forfait Garnish & Ghiaccio</strong></div>
+        <div style="font-size:20px;font-weight:800;color:var(--accent)">€ ${s.garnishCost.toFixed(2)}</div>
+      </div>
+      <div class="preset-row">
+        ${[0.10, 0.15, 0.20, 0.30].map(v => `<button class="preset-btn ${Math.abs(s.garnishCost-v)<0.001?'active':''}" onclick="db.settings.garnishCost=${v};saveAndRefresh()">€ ${v.toFixed(2)}</button>`).join("")}
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><strong>Dose Calice Vino / Martini / Spuma</strong></div>
+        <div style="font-size:20px;font-weight:800;color:var(--accent)">${s.wineGlassMl} ml</div>
+      </div>
+      <div class="preset-row">
+        ${[120, 150, 180].map(v => `<button class="preset-btn ${s.wineGlassMl===v?'active':''}" onclick="db.settings.wineGlassMl=${v};saveAndRefresh()">${v} ml</button>`).join("")}
+      </div>
+    </div>
+
+    <div class="settings-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><strong>Target Pour Cost Consigliato</strong></div>
+        <div style="font-size:20px;font-weight:800;color:var(--accent)">${s.targetPourCostPercent}%</div>
+      </div>
+      <div class="preset-row">
+        ${[16, 18, 20, 22].map(v => `<button class="preset-btn ${s.targetPourCostPercent===v?'active':''}" onclick="db.settings.targetPourCostPercent=${v};saveAndRefresh()">${v}%</button>`).join("")}
+      </div>
+    </div>
+
+    <div class="cat-header">Sincronizza e Condividi (iPhone / Mac / Colleghi)</div>
+    <button class="action-btn" onclick="exportJSON()">
+      <span>📤 Esporta Database (.json) per Backup o AirDrop</span>
+      <span style="color:var(--accent)">Scarica →</span>
+    </button>
+    <button class="action-btn" onclick="document.getElementById('importFile').click()">
+      <span>📥 Importa Database (.json) da File / iCloud</span>
+      <span style="color:var(--green)">Carica →</span>
+    </button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+    <button class="action-btn" style="color:var(--red)" onclick="if(confirm('Ripristinare le ricette standard mantenendo i tuoi prezzi bottiglia?')){resetKeepPrices()}">
+      <span>🔄 Riallinea Ricette di Fabbrica (Mantieni i miei Prezzi)</span>
+      <span>Ripristina</span>
+    </button>
+  `;
+}
+
+function openEditBottleModal(id) {
+  const b = getBottle(id);
+  if (!b) return;
+  const impacted = cocktailsUsing(id);
+  document.getElementById("modalContent").innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">${b.name}</div>
+      <button class="btn-close" onclick="closeModal()">Salva e Chiudi</button>
+    </div>
+    <div class="form-row">
+      <label>Prezzo Bottiglia (€ IVA escl.)</label>
+      <input type="text" inputmode="decimal" class="form-input" value="${b.price.toFixed(2).replace('.',',')}" oninput="updateBottleField('${b.id}','price',this.value)">
+    </div>
+    <div class="form-row">
+      <label>Formato (${b.unit})</label>
+      <input type="text" inputmode="decimal" class="form-input" value="${b.size}" oninput="updateBottleField('${b.id}','size',this.value)">
+    </div>
+    <div class="form-row">
+      <label>Spreco / Spill (%)</label>
+      <input type="text" inputmode="decimal" class="form-input" value="${b.wastePercent}" oninput="updateBottleField('${b.id}','wastePercent',this.value)">
+    </div>
+    <div class="cat-header" style="margin-top:16px;">⚡ ${impacted.length} Cocktail aggiornati in tempo reale</div>
+    <div id="modalImpactedList"></div>
+  `;
+  renderModalImpacted(id);
+  document.getElementById("modalBackdrop").classList.add("open");
+}
+
+function renderModalImpacted(bottleId) {
+  const impacted = cocktailsUsing(bottleId);
+  const el = document.getElementById("modalImpactedList");
+  if (!el) return;
+  el.innerHTML = impacted.map(c => `
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div>
+        <div style="font-weight:700;font-size:14px;">${c.name}</div>
+        <div style="font-size:11px;color:var(--subtext);">Menu: € ${c.menuPrice.toFixed(2)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-weight:800;color:var(--green);">€ ${drinkCost(c).toFixed(2)}</div>
+        <div style="font-size:11px;color:var(--subtext);">PC: ${pourCostPercent(c).toFixed(1)}%</div>
+      </div>
+    </div>
+  `).join("") + (impacted.length > 0 ? `
+    <button class="btn-add" style="width:100%;padding:12px;margin-top:12px;" onclick="closeModal();filterByBottle('${bottleId}')">
+      Isola questi ${impacted.length} cocktail nel listino →
+    </button>
+  ` : '');
+}
+
+function updateBottleField(id, field, val) {
+  const b = getBottle(id);
+  if (!b) return;
+  b[field] = Math.max(0, parseNum(val, b[field]));
+  lastModifiedBottleId = id;
+  saveDB();
+  renderKPIs();
+  renderBottles();
+  renderModalImpacted(id);
+  showReactiveToast(id);
+}
+
+function showReactiveToast(bottleId) {
+  const b = getBottle(bottleId);
+  const count = cocktailsUsing(bottleId).length;
+  const t = document.getElementById("reactiveToast");
+  if (!b || currentTab !== 0) { t.style.display = "none"; return; }
+  t.style.display = "flex";
+  t.innerHTML = `
+    <div>
+      <div style="font-weight:800;font-size:14px;">⚡ ${b.name} aggiornato a € ${b.price.toFixed(2)}</div>
+      <div style="font-size:12px;">Ricalcolati in automatico ${count} cocktail</div>
+    </div>
+    <button onclick="t=document.getElementById('reactiveToast');t.style.display='none';filterByBottle('${bottleId}')">Vedi ${count} Drink →</button>
+  `;
+}
+
+function openEditCocktailModal(id) {
+  const c = db.cocktails.find(x => x.id === id);
+  if (!c) return;
+  const dc = drinkCost(c);
+  const pc = pourCostPercent(c);
+  const sug = suggestedMenuPrice(c);
+  document.getElementById("modalContent").innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">${c.name}</div>
+      <button class="btn-close" onclick="closeModal()">Fine</button>
+    </div>
+    <div class="form-row">
+      <label>Drink Cost Totale</label>
+      <div style="font-size:19px;font-weight:800;color:var(--green)" id="modDC">€ ${dc.toFixed(2)}</div>
+    </div>
+    <div class="form-row">
+      <label>Pour Cost % (su netto)</label>
+      <div style="font-size:16px;font-weight:800;" id="modPC">${pc.toFixed(1)}%</div>
+    </div>
+    <div class="form-row">
+      <label>Prezzo Consigliato (Target ${db.settings.targetPourCostPercent}%)</label>
+      <div style="font-size:16px;font-weight:800;color:var(--accent)">€ ${sug.toFixed(2)}</div>
+    </div>
+    <div class="form-row">
+      <label>Prezzo Vendita Menu (€)</label>
+      <input type="text" inputmode="decimal" class="form-input" value="${c.menuPrice.toFixed(2).replace('.',',')}" oninput="updateCocktailPrice('${c.id}',this.value)">
+    </div>
+    <div class="cat-header">Composizione Ricetta</div>
+    ${c.ingredients.map(i => {
+      const b = getBottle(i.bottleId);
+      if (!b) return '';
+      const q = effectiveQty(i);
+      return `<div class="form-row"><span>${b.name} (${q} ${b.unit})</span><strong style="color:var(--green)">€ ${(q*unitCost(b)).toFixed(2)}</strong></div>`;
+    }).join("")}
+  `;
+  document.getElementById("modalBackdrop").classList.add("open");
+}
+
+function updateCocktailPrice(id, val) {
+  const c = db.cocktails.find(x => x.id === id);
+  if (!c) return;
+  c.menuPrice = Math.max(0.5, parseNum(val, c.menuPrice));
+  saveDB();
+  renderKPIs();
+  renderCocktails();
+  const pcEl = document.getElementById("modPC");
+  if (pcEl) pcEl.textContent = pourCostPercent(c).toFixed(1) + "%";
+}
+
+function openAddBottleModal() {
+  document.getElementById("modalContent").innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">Nuova Bottiglia</div>
+      <button class="btn-close" onclick="saveNewBottle()">Aggiungi</button>
+    </div>
+    <div class="form-row"><label>Nome</label><input id="nbName" class="form-input" style="width:180px;color:#fff;" placeholder="Es. Montenegro"></div>
+    <div class="form-row"><label>Formato (ml)</label><input id="nbSize" type="text" inputmode="decimal" class="form-input" value="1000"></div>
+    <div class="form-row"><label>Prezzo (€ IVA escl.)</label><input id="nbPrice" type="text" inputmode="decimal" class="form-input" value="15,00"></div>
+    <div class="form-row"><label>Spreco (%)</label><input id="nbWaste" type="text" inputmode="decimal" class="form-input" value="5"></div>
+  `;
+  document.getElementById("modalBackdrop").classList.add("open");
+}
+
+function saveNewBottle() {
+  const name = (document.getElementById("nbName").value || "").trim();
+  if (!name) return;
+  const size = parseNum(document.getElementById("nbSize").value, 1000);
+  const price = parseNum(document.getElementById("nbPrice").value, 15);
+  const waste = parseNum(document.getElementById("nbWaste").value, 5);
+  db.bottles.push({
+    id: name.toLowerCase().replace(/[^a-z0-9]/g, "_") + "_" + Math.floor(Math.random()*900+100),
+    name, category: "Liquori", unit: "ml", size, price, wastePercent: waste
+  });
+  saveAndRefresh();
+  closeModal();
+}
+
+function openAddCocktailModal() {
+  const opts = db.bottles.map(b => `<option value="${b.id}">${b.name} (${b.unit})</option>`).join("");
+  document.getElementById("modalContent").innerHTML = `
+    <div class="modal-header">
+      <div class="modal-title">Nuovo Cocktail</div>
+      <button class="btn-close" onclick="saveNewCocktail()">Crea</button>
+    </div>
+    <div class="form-row"><label>Nome Drink</label><input id="ncName" class="form-input" style="width:180px;color:#fff;" placeholder="Es. Paloma"></div>
+    <div class="form-row"><label>Prezzo Menu (€)</label><input id="ncPrice" type="text" inputmode="decimal" class="form-input" value="8,00"></div>
+    <div class="form-row"><label>Ingrediente 1</label><select id="ncB1" class="form-input" style="width:180px;color:#fff;">${opts}</select></div>
+    <div class="form-row"><label>Dose 1</label><input id="ncQ1" type="text" inputmode="decimal" class="form-input" value="50"></div>
+    <div class="form-row"><label>Ingrediente 2</label><select id="ncB2" class="form-input" style="width:180px;color:#fff;">${opts}</select></div>
+    <div class="form-row"><label>Dose 2</label><input id="ncQ2" type="text" inputmode="decimal" class="form-input" value="150"></div>
+  `;
+  document.getElementById("modalBackdrop").classList.add("open");
+}
+
+function saveNewCocktail() {
+  const name = (document.getElementById("ncName").value || "").trim();
+  if (!name) return;
+  const menuPrice = parseNum(document.getElementById("ncPrice").value, 8);
+  const b1 = document.getElementById("ncB1").value;
+  const q1 = parseNum(document.getElementById("ncQ1").value, 50);
+  const b2 = document.getElementById("ncB2").value;
+  const q2 = parseNum(document.getElementById("ncQ2").value, 150);
+  db.cocktails.push({
+    id: name.toLowerCase().replace(/[^a-z0-9]/g, "_") + "_" + Math.floor(Math.random()*900+100),
+    name, category: "Signature & IBA", menuPrice, includeGarnish: true,
+    ingredients: [{bottleId: b1, qty: q1}, {bottleId: b2, qty: q2}]
+  });
+  saveAndRefresh();
+  closeModal();
+}
+
+function closeModal() {
+  document.getElementById("modalBackdrop").classList.remove("open");
+}
+
+function switchTab(idx) {
+  currentTab = idx;
+  document.getElementById("tabBottles").style.display = idx === 0 ? "block" : "none";
+  document.getElementById("tabCocktails").style.display = idx === 1 ? "block" : "none";
+  document.getElementById("tabSettings").style.display = idx === 2 ? "block" : "none";
+  document.getElementById("navBtn0").classList.toggle("active", idx === 0);
+  document.getElementById("navBtn1").classList.toggle("active", idx === 1);
+  document.getElementById("navBtn2").classList.toggle("active", idx === 2);
+  if (idx !== 0) document.getElementById("reactiveToast").style.display = "none";
+  renderAll();
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(db, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "DrinkCost_Backup.json"; a.click();
+}
+
+function importJSON(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (parsed && parsed.bottles && parsed.cocktails) {
+        db = parsed;
+        saveAndRefresh();
+        alert("Database importato e salvato con successo!");
+      }
+    } catch (err) { alert("File JSON non valido."); }
+  };
+  reader.readAsText(file);
+}
+
+function resetKeepPrices() {
+  const factory = getFactoryDB();
+  const priceMap = {};
+  db.bottles.forEach(b => priceMap[b.id] = b.price);
+  factory.bottles.forEach(b => { if (priceMap[b.id] !== undefined) b.price = priceMap[b.id]; });
+  db = factory;
+  saveAndRefresh();
+}
+
+function saveAndRefresh() {
+  saveDB();
+  renderAll();
+}
+
+function renderAll() {
+  renderKPIs();
+  renderBottles();
+  renderCocktails();
+  renderSettings();
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+loadDB();
+renderAll();
+</script>
+</body>
+</html>
